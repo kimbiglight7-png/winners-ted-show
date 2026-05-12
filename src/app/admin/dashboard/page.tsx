@@ -1,65 +1,66 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { Room } from '@/types';
 
-export const revalidate = 0;
+export default function AdminLoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-async function getRoomsWithPresentations(): Promise<Room[]> {
-  const { data } = await supabase
-    .from('rooms')
-    .select('*, presentations(*)')
-    .order('created_at', { ascending: false });
-  return data ?? [];
-}
+  async function handleLogin() {
+    if (!email || !password) { setError('이메일과 비밀번호를 입력해주세요.'); return; }
+    setLoading(true);
+    setError('');
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    if (authError) {
+      setError('이메일 또는 비밀번호가 올바르지 않습니다.');
+      setLoading(false);
+    } else {
+      window.location.href = '/admin/dashboard';
+    }
+  }
 
-export default async function HomePage() {
-  const rooms = await getRoomsWithPresentations();
   return (
-    <main style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <header style={{ borderBottom: '1px solid var(--border)', padding: '0 40px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ background: 'var(--red)', color: '#fff', fontWeight: 700, fontSize: 13, padding: '3px 8px', borderRadius: 4 }}>TED</span>
-          <span style={{ fontSize: 18, fontWeight: 700 }}>위너스 TED쇼</span>
-        </div>
-        <Link href="/admin" className="btn btn-ghost" style={{ fontSize: 13, padding: '8px 16px' }}>관리자 로그인</Link>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+      <header style={{ borderBottom: '1px solid var(--border)', padding: '0 40px', height: '56px', display: 'flex', alignItems: 'center' }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: 'var(--text)' }}>
+          <span style={{ background: 'var(--red)', color: '#fff', fontWeight: 700, fontSize: 12, padding: '2px 7px', borderRadius: 3 }}>TED</span>
+          <span style={{ fontSize: 16, fontWeight: 700 }}>위너스 TED쇼</span>
+        </Link>
       </header>
-      <section style={{ padding: '80px 40px 60px', maxWidth: 800, margin: '0 auto' }}>
-        <p style={{ fontSize: 13, color: 'var(--red)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16, fontWeight: 500 }}>Ideas Worth Spreading</p>
-        <h1 style={{ fontSize: 'clamp(36px, 6vw, 60px)', color: 'var(--text)', marginBottom: 20 }}>오늘의 발표를<br />함께 만들어가요</h1>
-        <p style={{ fontSize: 17, color: 'var(--text2)', maxWidth: 480, lineHeight: 1.7 }}>각 발표가 끝난 후 설문에 참여해 발표자에게 소중한 피드백을 전달해 주세요.</p>
-      </section>
-      <section style={{ padding: '0 40px 80px', maxWidth: 800, margin: '0 auto' }}>
-        <h2 style={{ fontSize: 16, fontWeight: 500, color: 'var(--text2)', marginBottom: 24 }}>발표 목록 ({rooms.length})</h2>
-        {rooms.length === 0 ? (
-          <div className="card" style={{ textAlign: 'center', padding: '60px 24px', color: 'var(--text3)' }}><p>등록된 발표가 없습니다.</p></div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {rooms.map((room, i) => <RoomCard key={room.id} room={room} index={i} />)}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+        <div className="card fade-up" style={{ width: '100%', maxWidth: 380, padding: 36 }}>
+          <div style={{ marginBottom: 32 }}>
+            <h1 style={{ fontSize: 22, marginBottom: 6 }}>관리자 로그인</h1>
+            <p style={{ fontSize: 13, color: 'var(--text3)' }}>발표 관리 및 설문 결과 확인</p>
           </div>
-        )}
-      </section>
-    </main>
-  );
-}
-
-function RoomCard({ room, index }: { room: Room; index: number }) {
-  const p = room.presentations;
-  if (!p) return null;
-  return (
-    <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, padding: '20px 24px' }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ marginBottom: 6 }}>
-          {room.is_open ? <span className="badge badge-red">설문 진행중</span>
-            : room.is_published ? <span className="badge badge-gold">결과 공개됨</span>
-            : <span className="badge badge-dim">설문 종료</span>}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>이메일</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleLogin()} placeholder="admin@winners-ted.com"
+                style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', color: 'var(--text)', fontSize: 15, padding: '12px 14px', outline: 'none', fontFamily: 'sans-serif' }}
+                onFocus={(e) => { e.target.style.borderColor = 'var(--red)'; e.target.style.background = '#fff'; }}
+                onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.background = 'var(--bg3)'; }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>비밀번호</label>
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleLogin()} placeholder="••••••••"
+                style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', color: 'var(--text)', fontSize: 15, padding: '12px 14px', outline: 'none', fontFamily: 'sans-serif' }}
+                onFocus={(e) => { e.target.style.borderColor = 'var(--red)'; e.target.style.background = '#fff'; }}
+                onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.background = 'var(--bg3)'; }} />
+            </div>
+          </div>
+          {error && <p style={{ fontSize: 13, color: 'var(--red)', background: 'var(--red-dim)', padding: '10px 14px', borderRadius: 'var(--radius)', marginBottom: 16 }}>{error}</p>}
+          <button className="btn btn-primary" onClick={handleLogin} disabled={loading} style={{ width: '100%', justifyContent: 'center', padding: '13px 24px', fontSize: 15 }}>
+            {loading ? '로그인 중...' : '로그인'}
+          </button>
+          <p style={{ fontSize: 12, color: 'var(--text3)', textAlign: 'center', marginTop: 20 }}>Supabase Authentication으로 보호됩니다</p>
         </div>
-        <h3 style={{ fontSize: 18, marginBottom: 4, color: 'var(--text)' }}>{p.title}</h3>
-        <p style={{ fontSize: 13, color: 'var(--text3)' }}>{p.presenter_name}</p>
-      </div>
-      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-        {room.is_open && <Link href={`/survey/${room.id}`} className="btn btn-primary" style={{ fontSize: 13, padding: '9px 18px' }}>설문 참여 →</Link>}
-        {room.is_published && <Link href={`/results/${room.id}`} className="btn btn-ghost" style={{ fontSize: 13, padding: '9px 18px' }}>결과 보기</Link>}
-        {!room.is_open && !room.is_published && <span style={{ fontSize: 13, color: 'var(--text3)' }}>집계 중...</span>}
       </div>
     </div>
   );
