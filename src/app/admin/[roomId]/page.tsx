@@ -12,20 +12,15 @@ export default function AdminRoomPage() {
   const [responses, setResponses] = useState<Response[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'good_points' | 'improvements' | 'questions'>('good_points');
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     fetchData();
-
     const channel = supabase
       .channel(`admin-room-${roomId}`)
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'responses',
-        filter: `room_id=eq.${roomId}`,
-      }, (payload) => {
-        setResponses(prev => [payload.new as Response, ...prev]);
-      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'responses', filter: `room_id=eq.${roomId}` },
+        (payload) => { setResponses(prev => [payload.new as Response, ...prev]); })
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
 
@@ -53,7 +48,85 @@ export default function AdminRoomPage() {
   async function copyShareLink() {
     const url = `${window.location.origin}/results/${roomId}`;
     await navigator.clipboard.writeText(url);
-    alert('링크가 복사되었습니다! 청중들에게 공유해주세요.');
+    alert('링크가 복사되었습니다!');
+  }
+
+  async function exportPDF() {
+    setExporting(true);
+    const p = room?.presentations;
+
+    const SECTIONS = [
+      { key: 'good_points' as keyof Response, label: '👍 좋았던 점', color: '#2ecc71' },
+      { key: 'improvements' as keyof Response, label: '✏️ 보완할 점', color: '#c9a84c' },
+      { key: 'questions' as keyof Response, label: '🙋 궁금한 점', color: '#4fc3f7' },
+    ];
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) { setExporting(false); return; }
+
+    const html = `
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>${p?.title} - 설문 결과</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; color: #1a1916; background: #fff; padding: 40px; }
+    .header { border-bottom: 2px solid #e8341c; padding-bottom: 20px; margin-bottom: 32px; }
+    .ted-badge { display: inline-block; background: #e8341c; color: #fff; font-weight: 700; font-size: 12px; padding: 2px 8px; border-radius: 3px; margin-bottom: 12px; }
+    .title { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+    .presenter { font-size: 14px; color: #6b6860; margin-bottom: 8px; }
+    .meta { font-size: 13px; color: #aba89f; }
+    .section { margin-bottom: 36px; }
+    .section-title { font-size: 16px; font-weight: 700; margin-bottom: 14px; padding: 8px 14px; border-radius: 6px; }
+    .response-item { border: 1px solid #e8e6e0; border-radius: 6px; padding: 14px 16px; margin-bottom: 8px; font-size: 14px; line-height: 1.65; display: flex; justify-content: space-between; gap: 16px; }
+    .response-text { flex: 1; }
+    .response-time { font-size: 11px; color: #aba89f; flex-shrink: 0; padding-top: 2px; }
+    .empty { color: #aba89f; font-size: 14px; padding: 16px; text-align: center; }
+    .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e8e6e0; font-size: 12px; color: #aba89f; text-align: center; }
+    @media print {
+      body { padding: 20px; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="ted-badge">TED</div>
+    <div class="title">${p?.title ?? ''}</div>
+    <div class="presenter">발표자: ${p?.presenter_name ?? ''}</div>
+    <div class="meta">총 ${responses.length}개 응답 · 출력일: ${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+  </div>
+
+  ${SECTIONS.map(section => `
+    <div class="section">
+      <div class="section-title" style="background: ${section.color}15; color: ${section.color === '#4fc3f7' ? '#0288d1' : section.color}; border-left: 3px solid ${section.color};">
+        ${section.label} (${responses.length}개)
+      </div>
+      ${responses.length === 0
+        ? '<div class="empty">응답 없음</div>'
+        : responses.map(resp => `
+          <div class="response-item">
+            <div class="response-text">${String(resp[section.key]).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+            <div class="response-time">${new Date(resp.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+        `).join('')
+      }
+    </div>
+  `).join('')}
+
+  <div class="footer">위너스 TED쇼 설문 결과 · winners-ted-show.vercel.app</div>
+
+  <script>
+    window.onload = function() { window.print(); }
+  </script>
+</body>
+</html>`;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    setExporting(false);
   }
 
   if (loading) return (
@@ -65,7 +138,7 @@ export default function AdminRoomPage() {
   const p = room?.presentations;
   const TABS = [
     { key: 'good_points' as const, label: '👍 좋았던 점', color: '#2ecc71' },
-    { key: 'improvements' as const, label: '✏️ 보완할 점', color: 'var(--gold)' },
+    { key: 'improvements' as const, label: '✏️ 보완할 점', color: '#c9a84c' },
     { key: 'questions' as const, label: '🙋 궁금한 점', color: '#4fc3f7' },
   ];
   const activeColor = TABS.find(t => t.key === activeTab)?.color ?? 'var(--red)';
@@ -79,6 +152,11 @@ export default function AdminRoomPage() {
           <span style={{ fontSize: 14, color: 'var(--text2)' }}>설문 결과</span>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          {responses.length > 0 && (
+            <button className="btn btn-ghost" onClick={exportPDF} disabled={exporting} style={{ fontSize: 13, padding: '8px 14px' }}>
+              {exporting ? '준비 중...' : '📄 PDF 추출'}
+            </button>
+          )}
           {room?.is_published ? (
             <button className="btn btn-ghost" onClick={copyShareLink} style={{ fontSize: 13, padding: '8px 14px' }}>🔗 공유 링크 복사</button>
           ) : (
@@ -97,13 +175,9 @@ export default function AdminRoomPage() {
       <div style={{ maxWidth: 780, margin: '0 auto', padding: '40px 32px 80px' }}>
         <div className="fade-up" style={{ marginBottom: 36 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            {room?.is_open ? (
-              <span className="badge badge-red">실시간 수집 중</span>
-            ) : room?.is_published ? (
-              <span className="badge badge-gold">결과 공개됨</span>
-            ) : (
-              <span className="badge badge-dim">설문 종료</span>
-            )}
+            {room?.is_open ? <span className="badge badge-red">실시간 수집 중</span>
+              : room?.is_published ? <span className="badge badge-gold">결과 공개됨</span>
+              : <span className="badge badge-dim">설문 종료</span>}
             <span style={{ fontSize: 13, color: 'var(--text3)' }}>총 {responses.length}개 응답</span>
           </div>
           <h1 style={{ fontSize: 'clamp(20px, 3vw, 28px)', marginBottom: 6 }}>{p?.title}</h1>
