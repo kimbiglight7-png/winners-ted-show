@@ -52,80 +52,70 @@ export default function AdminRoomPage() {
   }
 
   async function exportPDF() {
-    setExporting(true);
     const p = room?.presentations;
-
     const SECTIONS = [
       { key: 'good_points' as keyof Response, label: '👍 좋았던 점', color: '#2ecc71' },
       { key: 'improvements' as keyof Response, label: '✏️ 보완할 점', color: '#c9a84c' },
       { key: 'questions' as keyof Response, label: '🙋 궁금한 점', color: '#4fc3f7' },
     ];
-
     const printWindow = window.open('', '_blank');
-    if (!printWindow) { setExporting(false); return; }
-
-    const html = `
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <title>${p?.title} - 설문 결과</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; color: #1a1916; background: #fff; padding: 40px; }
-    .header { border-bottom: 2px solid #e8341c; padding-bottom: 20px; margin-bottom: 32px; }
-    .ted-badge { display: inline-block; background: #e8341c; color: #fff; font-weight: 700; font-size: 12px; padding: 2px 8px; border-radius: 3px; margin-bottom: 12px; }
-    .title { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
-    .presenter { font-size: 14px; color: #6b6860; margin-bottom: 8px; }
-    .meta { font-size: 13px; color: #aba89f; }
-    .section { margin-bottom: 36px; }
-    .section-title { font-size: 16px; font-weight: 700; margin-bottom: 14px; padding: 8px 14px; border-radius: 6px; }
-    .response-item { border: 1px solid #e8e6e0; border-radius: 6px; padding: 14px 16px; margin-bottom: 8px; font-size: 14px; line-height: 1.65; display: flex; justify-content: space-between; gap: 16px; }
-    .response-text { flex: 1; }
-    .response-time { font-size: 11px; color: #aba89f; flex-shrink: 0; padding-top: 2px; }
-    .empty { color: #aba89f; font-size: 14px; padding: 16px; text-align: center; }
-    .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e8e6e0; font-size: 12px; color: #aba89f; text-align: center; }
-    @media print {
-      body { padding: 20px; }
-      .no-print { display: none; }
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="ted-badge">TED</div>
-    <div class="title">${p?.title ?? ''}</div>
-    <div class="presenter">발표자: ${p?.presenter_name ?? ''}</div>
-    <div class="meta">총 ${responses.length}개 응답 · 출력일: ${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-  </div>
-
-  ${SECTIONS.map(section => `
-    <div class="section">
-      <div class="section-title" style="background: ${section.color}15; color: ${section.color === '#4fc3f7' ? '#0288d1' : section.color}; border-left: 3px solid ${section.color};">
-        ${section.label} (${responses.length}개)
-      </div>
-      ${responses.length === 0
-        ? '<div class="empty">응답 없음</div>'
-        : responses.map(resp => `
-          <div class="response-item">
-            <div class="response-text">${String(resp[section.key]).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-            <div class="response-time">${new Date(resp.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</div>
-          </div>
-        `).join('')
-      }
-    </div>
-  `).join('')}
-
-  <div class="footer">위너스 TED쇼 설문 결과 · winners-ted-show.vercel.app</div>
-
-  <script>
-    window.onload = function() { window.print(); }
-  </script>
-</body>
-</html>`;
-
+    if (!printWindow) return;
+    const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${p?.title} - 설문 결과</title>
+    <style>* { margin:0; padding:0; box-sizing:border-box; } body { font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif; color:#1a1916; padding:40px; }
+    .header { border-bottom:2px solid #e8341c; padding-bottom:20px; margin-bottom:32px; }
+    .ted { display:inline-block; background:#e8341c; color:#fff; font-weight:700; font-size:12px; padding:2px 8px; border-radius:3px; margin-bottom:12px; }
+    .title { font-size:24px; font-weight:700; margin-bottom:6px; } .sub { font-size:14px; color:#6b6860; margin-bottom:4px; } .meta { font-size:12px; color:#aba89f; }
+    .section { margin-bottom:32px; } .sec-title { font-size:15px; font-weight:700; padding:8px 14px; border-radius:6px; margin-bottom:12px; }
+    .item { border:1px solid #e8e6e0; border-radius:6px; padding:12px 16px; margin-bottom:6px; font-size:14px; line-height:1.65; display:flex; justify-content:space-between; gap:16px; }
+    .time { font-size:11px; color:#aba89f; flex-shrink:0; } .footer { margin-top:32px; padding-top:12px; border-top:1px solid #e8e6e0; font-size:12px; color:#aba89f; text-align:center; }
+    @media print { body { padding:20px; } }</style></head><body>
+    <div class="header"><div class="ted">TED</div><div class="title">${p?.title ?? ''}</div>
+    <div class="sub">발표자: ${p?.presenter_name ?? ''}</div>
+    <div class="meta">총 ${responses.length}개 응답 · ${new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' })}</div></div>
+    ${SECTIONS.map(s => `<div class="section"><div class="sec-title" style="background:${s.color}15;border-left:3px solid ${s.color}">${s.label} (${responses.length}개)</div>
+    ${responses.map(r => `<div class="item"><span>${String(r[s.key]).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>
+    <span class="time">${new Date(r.created_at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}</span></div>`).join('')}</div>`).join('')}
+    <div class="footer">위너스 TED쇼 설문 결과</div>
+    <script>window.onload=function(){window.print();}</script></body></html>`;
     printWindow.document.write(html);
     printWindow.document.close();
+  }
+
+  function exportExcel() {
+    setExporting(true);
+    const p = room?.presentations;
+    const title = p?.title ?? '설문결과';
+    const presenter = p?.presenter_name ?? '';
+    const date = new Date().toLocaleDateString('ko-KR');
+
+    // CSV 데이터 생성 (Excel에서 열 수 있음)
+    const BOM = '\uFEFF'; // 한글 깨짐 방지
+    const header = ['번호', '좋았던 점', '보완할 점', '궁금한 점', '제출시간'];
+    const rows = [...responses].reverse().map((r, i) => [
+      i + 1,
+      `"${r.good_points.replace(/"/g, '""')}"`,
+      `"${r.improvements.replace(/"/g, '""')}"`,
+      `"${r.questions.replace(/"/g, '""')}"`,
+      `"${new Date(r.created_at).toLocaleString('ko-KR')}"`,
+    ]);
+
+    const csv = BOM + [
+      [`"발표: ${title}"`],
+      [`"발표자: ${presenter}"`],
+      [`"출력일: ${date}"`],
+      [`"총 응답 수: ${responses.length}개"`],
+      [],
+      header,
+      ...rows,
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title}_설문결과_${date.replace(/\./g, '').replace(/ /g, '')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
     setExporting(false);
   }
 
@@ -153,9 +143,14 @@ export default function AdminRoomPage() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {responses.length > 0 && (
-            <button className="btn btn-ghost" onClick={exportPDF} disabled={exporting} style={{ fontSize: 13, padding: '8px 14px' }}>
-              {exporting ? '준비 중...' : '📄 PDF 추출'}
-            </button>
+            <>
+              <button className="btn btn-ghost" onClick={exportExcel} disabled={exporting} style={{ fontSize: 13, padding: '8px 14px' }}>
+                {exporting ? '준비 중...' : '📊 엑셀 추출'}
+              </button>
+              <button className="btn btn-ghost" onClick={exportPDF} style={{ fontSize: 13, padding: '8px 14px' }}>
+                📄 PDF 추출
+              </button>
+            </>
           )}
           {room?.is_published ? (
             <button className="btn btn-ghost" onClick={copyShareLink} style={{ fontSize: 13, padding: '8px 14px' }}>🔗 공유 링크 복사</button>
