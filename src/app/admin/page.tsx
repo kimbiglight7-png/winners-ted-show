@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-
-const ADMIN_PASSWORD = '0316';
+import { ADMIN_PASSWORD } from '@/lib/adminAuth';
 
 export default function AdminLoginPage() {
   const [password, setPassword] = useState('');

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { ADMIN_PASSWORD } from '@/lib/adminAuth';
 import { Room } from '@/types';
 
 export default function AdminDashboard() {
@@ -30,28 +31,44 @@ export default function AdminDashboard() {
   async function createRoom() {
     if (!newPresentation.title.trim() || !newPresentation.presenter_name.trim()) return;
     setCreating(true);
-    const { data: pData, error: pError } = await supabase.from('presentations').insert(newPresentation).select().single();
-    if (pError || !pData) { setCreating(false); return; }
-    const { error: rError } = await supabase.from('rooms').insert({ presentation_id: pData.id });
-    if (!rError) { setNewPresentation({ title: '', presenter_name: '', description: '' }); setShowNewForm(false); fetchRooms(); }
+    const res = await fetch('/api/admin/rooms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-password': ADMIN_PASSWORD },
+      body: JSON.stringify(newPresentation),
+    });
+    if (res.ok) { setNewPresentation({ title: '', presenter_name: '', description: '' }); setShowNewForm(false); fetchRooms(); }
+    else alert('발표 추가에 실패했습니다.');
     setCreating(false);
   }
 
   async function toggleRoom(roomId: string, currentState: boolean) {
-    await supabase.from('rooms').update({ is_open: !currentState }).eq('id', roomId);
+    const res = await fetch(`/api/admin/rooms/${roomId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-admin-password': ADMIN_PASSWORD },
+      body: JSON.stringify({ is_open: !currentState }),
+    });
+    if (!res.ok) { alert('상태 변경에 실패했습니다.'); return; }
     fetchRooms();
   }
 
   async function publishResults(roomId: string) {
-    await supabase.from('rooms').update({ is_published: true, is_open: false }).eq('id', roomId);
+    const res = await fetch(`/api/admin/rooms/${roomId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-admin-password': ADMIN_PASSWORD },
+      body: JSON.stringify({ is_published: true, is_open: false }),
+    });
+    if (!res.ok) { alert('결과 공개에 실패했습니다.'); return; }
     fetchRooms();
   }
 
   async function deleteRoom(roomId: string, presentationId: string) {
     if (!confirm('정말 삭제하시겠습니까?\n설문 응답 데이터도 모두 삭제됩니다.')) return;
-    await supabase.from('responses').delete().eq('room_id', roomId);
-    await supabase.from('rooms').delete().eq('id', roomId);
-    await supabase.from('presentations').delete().eq('id', presentationId);
+    const res = await fetch(`/api/admin/rooms/${roomId}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'x-admin-password': ADMIN_PASSWORD },
+      body: JSON.stringify({ presentationId }),
+    });
+    if (!res.ok) { alert('삭제에 실패했습니다.'); return; }
     fetchRooms();
   }
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { ADMIN_PASSWORD } from '@/lib/adminAuth';
 import { Room, Response } from '@/types';
 
 export default function AdminRoomPage() {
@@ -36,12 +37,22 @@ export default function AdminRoomPage() {
 
   async function toggleRoom() {
     if (!room) return;
-    await supabase.from('rooms').update({ is_open: !room.is_open }).eq('id', roomId);
+    const res = await fetch(`/api/admin/rooms/${roomId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-admin-password': ADMIN_PASSWORD },
+      body: JSON.stringify({ is_open: !room.is_open }),
+    });
+    if (!res.ok) { alert('상태 변경에 실패했습니다.'); return; }
     setRoom(r => r ? { ...r, is_open: !r.is_open } : r);
   }
 
   async function publishResults() {
-    await supabase.from('rooms').update({ is_published: true, is_open: false }).eq('id', roomId);
+    const res = await fetch(`/api/admin/rooms/${roomId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-admin-password': ADMIN_PASSWORD },
+      body: JSON.stringify({ is_published: true, is_open: false }),
+    });
+    if (!res.ok) { alert('결과 공개에 실패했습니다.'); return; }
     setRoom(r => r ? { ...r, is_published: true, is_open: false } : r);
   }
 
