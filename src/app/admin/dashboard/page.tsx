@@ -11,6 +11,7 @@ export default function AdminDashboard() {
   const [showNewForm, setShowNewForm] = useState(false);
   const [newPresentation, setNewPresentation] = useState({ title: '', presenter_name: '', description: '' });
   const [creating, setCreating] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'open' | 'closed' | 'published'>('all');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -59,6 +60,11 @@ export default function AdminDashboard() {
     window.location.href = '/admin';
   }
 
+  const closedRooms = rooms.filter(r => !r.is_open && !r.is_published);
+  const publishedRooms = rooms.filter(r => r.is_published);
+  const openRooms = rooms.filter(r => r.is_open);
+  const filteredRooms = filter === 'open' ? openRooms : filter === 'closed' ? closedRooms : filter === 'published' ? publishedRooms : rooms;
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <header style={{ borderBottom: '1px solid var(--border)', padding: '0 32px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -93,22 +99,34 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 32 }}>
-          {[{ label: '전체 발표', value: rooms.length }, { label: '진행중', value: rooms.filter(r => r.is_open).length }, { label: '결과 공개', value: rooms.filter(r => r.is_published).length }].map((stat) => (
-            <div key={stat.label} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 32 }}>
+          {([
+            { key: 'all', label: '전체 발표', value: rooms.length },
+            { key: 'open', label: '진행중', value: openRooms.length },
+            { key: 'closed', label: '종료', value: closedRooms.length },
+            { key: 'published', label: '결과 공개', value: publishedRooms.length },
+          ] as const).map((stat) => (
+            <button key={stat.key} onClick={() => setFilter(stat.key)}
+              style={{
+                background: filter === stat.key ? 'var(--red-dim)' : 'var(--bg2)',
+                border: `1px solid ${filter === stat.key ? 'var(--red)' : 'var(--border)'}`,
+                borderRadius: 'var(--radius)', padding: '16px 20px', textAlign: 'left', cursor: 'pointer', fontFamily: 'sans-serif',
+              }}>
               <p style={{ fontSize: 12, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>{stat.label}</p>
-              <p style={{ fontSize: 28, fontWeight: 500 }}>{stat.value}</p>
-            </div>
+              <p style={{ fontSize: 28, fontWeight: 500, color: 'var(--text)' }}>{stat.value}</p>
+            </button>
           ))}
         </div>
 
         {loading ? (
           <p style={{ color: 'var(--text3)', fontSize: 14 }}>불러오는 중...</p>
-        ) : rooms.length === 0 ? (
-          <div className="card" style={{ textAlign: 'center', padding: '60px', color: 'var(--text3)' }}><p>발표가 없습니다. 위 버튼으로 발표를 추가해주세요.</p></div>
+        ) : filteredRooms.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: '60px', color: 'var(--text3)' }}>
+            <p>{filter === 'all' ? '발표가 없습니다. 위 버튼으로 발표를 추가해주세요.' : '해당하는 발표가 없습니다.'}</p>
+          </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {rooms.map((room) => (
+            {filteredRooms.map((room) => (
               <AdminRoomCard key={room.id} room={room}
                 onToggle={() => toggleRoom(room.id, room.is_open)}
                 onPublish={() => publishResults(room.id)}
