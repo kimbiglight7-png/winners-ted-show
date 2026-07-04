@@ -16,7 +16,6 @@ CREATE TABLE rooms (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   presentation_id UUID REFERENCES presentations(id) ON DELETE CASCADE,
   is_open BOOLEAN DEFAULT TRUE,
-  is_published BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

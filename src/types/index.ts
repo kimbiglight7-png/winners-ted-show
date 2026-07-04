@@ -10,7 +10,6 @@ export interface Room {
   id: string;
   presentation_id: string;
   is_open: boolean;
-  is_published: boolean;
   created_at: string;
   presentations?: Presentation;
 }

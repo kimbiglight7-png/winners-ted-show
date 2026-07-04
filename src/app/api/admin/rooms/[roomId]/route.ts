@@ -6,13 +6,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ro
   if (!isAdminRequest(request)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
   const { roomId } = await params;
-  const { is_open, is_published } = await request.json();
-  const update: { is_open?: boolean; is_published?: boolean } = {};
-  if (typeof is_open === 'boolean') update.is_open = is_open;
-  if (typeof is_published === 'boolean') update.is_published = is_published;
+  const { is_open } = await request.json();
+  if (typeof is_open !== 'boolean') return NextResponse.json({ error: 'is_open must be a boolean' }, { status: 400 });
 
   const admin = createAdminClient();
-  const { error } = await admin.from('rooms').update(update).eq('id', roomId);
+  const { error } = await admin.from('rooms').update({ is_open }).eq('id', roomId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ ok: true });

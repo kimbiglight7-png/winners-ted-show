@@ -12,7 +12,7 @@ export default function AdminDashboard() {
   const [showNewForm, setShowNewForm] = useState(false);
   const [newPresentation, setNewPresentation] = useState({ title: '', presenter_name: '', description: '' });
   const [creating, setCreating] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'open' | 'closed' | 'published'>('all');
+  const [filter, setFilter] = useState<'all' | 'open' | 'closed'>('all');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -51,16 +51,6 @@ export default function AdminDashboard() {
     fetchRooms();
   }
 
-  async function publishResults(roomId: string) {
-    const res = await fetch(`/api/admin/rooms/${roomId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'x-admin-password': ADMIN_PASSWORD },
-      body: JSON.stringify({ is_published: true, is_open: false }),
-    });
-    if (!res.ok) { alert('결과 공개에 실패했습니다.'); return; }
-    fetchRooms();
-  }
-
   async function deleteRoom(roomId: string, presentationId: string) {
     if (!confirm('정말 삭제하시겠습니까?\n설문 응답 데이터도 모두 삭제됩니다.')) return;
     const res = await fetch(`/api/admin/rooms/${roomId}`, {
@@ -77,10 +67,9 @@ export default function AdminDashboard() {
     window.location.href = '/admin';
   }
 
-  const closedRooms = rooms.filter(r => !r.is_open && !r.is_published);
-  const publishedRooms = rooms.filter(r => r.is_published);
+  const closedRooms = rooms.filter(r => !r.is_open);
   const openRooms = rooms.filter(r => r.is_open);
-  const filteredRooms = filter === 'open' ? openRooms : filter === 'closed' ? closedRooms : filter === 'published' ? publishedRooms : rooms;
+  const filteredRooms = filter === 'open' ? openRooms : filter === 'closed' ? closedRooms : rooms;
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -116,12 +105,11 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 32 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 32 }}>
           {([
             { key: 'all', label: '전체 발표', value: rooms.length },
             { key: 'open', label: '진행중', value: openRooms.length },
             { key: 'closed', label: '종료', value: closedRooms.length },
-            { key: 'published', label: '결과 공개', value: publishedRooms.length },
           ] as const).map((stat) => (
             <button key={stat.key} onClick={() => setFilter(stat.key)}
               style={{
@@ -146,7 +134,6 @@ export default function AdminDashboard() {
             {filteredRooms.map((room) => (
               <AdminRoomCard key={room.id} room={room}
                 onToggle={() => toggleRoom(room.id, room.is_open)}
-                onPublish={() => publishResults(room.id)}
                 onDelete={() => deleteRoom(room.id, room.presentation_id)}
               />
             ))}
@@ -157,7 +144,7 @@ export default function AdminDashboard() {
   );
 }
 
-function AdminRoomCard({ room, onToggle, onPublish, onDelete }: { room: Room; onToggle: () => void; onPublish: () => void; onDelete: () => void; }) {
+function AdminRoomCard({ room, onToggle, onDelete }: { room: Room; onToggle: () => void; onDelete: () => void; }) {
   const p = room.presentations;
   const [responseCount, setResponseCount] = useState<number | null>(null);
 
@@ -171,7 +158,7 @@ function AdminRoomCard({ room, onToggle, onPublish, onDelete }: { room: Room; on
     <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '18px 24px' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-          {room.is_open ? <span className="badge badge-red">진행중</span> : room.is_published ? <span className="badge badge-gold">공개됨</span> : <span className="badge badge-dim">종료</span>}
+          {room.is_open ? <span className="badge badge-red">진행중</span> : <span className="badge badge-dim">종료</span>}
           {responseCount !== null && <span style={{ fontSize: 12, color: 'var(--text3)' }}>응답 {responseCount}개</span>}
         </div>
         <h3 style={{ fontSize: 16, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</h3>
@@ -179,14 +166,7 @@ function AdminRoomCard({ room, onToggle, onPublish, onDelete }: { room: Room; on
       </div>
       <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>
         <Link href={`/admin/${room.id}`} className="btn btn-ghost" style={{ fontSize: 12, padding: '7px 14px' }}>결과 보기</Link>
-        {!room.is_published && (
-          <>
-            <button className="btn btn-ghost" onClick={onToggle} style={{ fontSize: 12, padding: '7px 14px' }}>{room.is_open ? '설문 종료' : '설문 열기'}</button>
-            {!room.is_open && (responseCount ?? 0) > 0 && (
-              <button className="btn btn-outline-red" onClick={onPublish} style={{ fontSize: 12, padding: '7px 14px' }}>결과 공개</button>
-            )}
-          </>
-        )}
+        <button className="btn btn-ghost" onClick={onToggle} style={{ fontSize: 12, padding: '7px 14px' }}>{room.is_open ? '설문 종료' : '설문 열기'}</button>
         <button onClick={onDelete}
           style={{ background: 'transparent', border: '1px solid rgba(232,52,28,0.2)', borderRadius: 'var(--radius)', color: 'var(--text3)', fontSize: 12, padding: '7px 12px', cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'sans-serif' }}
           onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--red-dim)'; e.currentTarget.style.color = 'var(--red)'; }}

@@ -46,22 +46,6 @@ export default function AdminRoomPage() {
     setRoom(r => r ? { ...r, is_open: !r.is_open } : r);
   }
 
-  async function publishResults() {
-    const res = await fetch(`/api/admin/rooms/${roomId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'x-admin-password': ADMIN_PASSWORD },
-      body: JSON.stringify({ is_published: true, is_open: false }),
-    });
-    if (!res.ok) { alert('결과 공개에 실패했습니다.'); return; }
-    setRoom(r => r ? { ...r, is_published: true, is_open: false } : r);
-  }
-
-  async function copyShareLink() {
-    const url = `${window.location.origin}/results/${roomId}`;
-    await navigator.clipboard.writeText(url);
-    alert('링크가 복사되었습니다!');
-  }
-
   async function exportPDF() {
     const p = room?.presentations;
     const SECTIONS = [
@@ -163,27 +147,16 @@ export default function AdminRoomPage() {
               </button>
             </>
           )}
-          {room?.is_published ? (
-            <button className="btn btn-ghost" onClick={copyShareLink} style={{ fontSize: 13, padding: '8px 14px' }}>🔗 공유 링크 복사</button>
-          ) : (
-            <>
-              <button className="btn btn-ghost" onClick={toggleRoom} style={{ fontSize: 13, padding: '8px 14px' }}>
-                {room?.is_open ? '설문 종료' : '설문 열기'}
-              </button>
-              {!room?.is_open && responses.length > 0 && (
-                <button className="btn btn-primary" onClick={publishResults} style={{ fontSize: 13, padding: '8px 16px' }}>결과 공개하기 →</button>
-              )}
-            </>
-          )}
+          <button className="btn btn-ghost" onClick={toggleRoom} style={{ fontSize: 13, padding: '8px 14px' }}>
+            {room?.is_open ? '설문 종료' : '설문 열기'}
+          </button>
         </div>
       </header>
 
       <div style={{ maxWidth: 780, margin: '0 auto', padding: '40px 32px 80px' }}>
         <div className="fade-up" style={{ marginBottom: 36 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            {room?.is_open ? <span className="badge badge-red">실시간 수집 중</span>
-              : room?.is_published ? <span className="badge badge-gold">결과 공개됨</span>
-              : <span className="badge badge-dim">설문 종료</span>}
+            {room?.is_open ? <span className="badge badge-red">실시간 수집 중</span> : <span className="badge badge-dim">설문 종료</span>}
             <span style={{ fontSize: 13, color: 'var(--text3)' }}>총 {responses.length}개 응답</span>
           </div>
           <h1 style={{ fontSize: 'clamp(20px, 3vw, 28px)', marginBottom: 6 }}>{p?.title}</h1>

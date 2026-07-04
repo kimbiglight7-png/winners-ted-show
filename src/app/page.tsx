@@ -6,7 +6,7 @@ async function getRoomsWithPresentations(): Promise<Room[]> {
   const { data } = await supabase
     .from('rooms')
     .select('*, presentations(*)')
-    .or('is_open.eq.true,is_published.eq.true')
+    .eq('is_open', true)
     .order('created_at', { ascending: false });
   return data ?? [];
 }
@@ -48,14 +48,13 @@ function RoomCard({ room, index }: { room: Room; index: number }) {
     <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, padding: '20px 24px' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ marginBottom: 6 }}>
-          {room.is_open ? <span className="badge badge-red">설문 진행중</span> : <span className="badge badge-gold">결과 공개됨</span>}
+          <span className="badge badge-red">설문 진행중</span>
         </div>
         <h3 style={{ fontSize: 18, marginBottom: 4, color: 'var(--text)', fontFamily: 'var(--font-serif), serif' }}>{p.title}</h3>
         <p style={{ fontSize: 13, color: 'var(--text3)' }}>{p.presenter_name}</p>
       </div>
       <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-        {room.is_open && <Link href={`/survey/${room.id}`} className="btn btn-primary" style={{ fontSize: 13, padding: '9px 18px' }}>설문 참여 →</Link>}
-        {room.is_published && <Link href={`/results/${room.id}`} className="btn btn-ghost" style={{ fontSize: 13, padding: '9px 18px' }}>결과 보기</Link>}
+        <Link href={`/survey/${room.id}`} className="btn btn-primary" style={{ fontSize: 13, padding: '9px 18px' }}>설문 참여 →</Link>
       </div>
     </div>
   );
