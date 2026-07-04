@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Room } from '@/types';
 
+export const dynamic = 'force-dynamic';
+
 async function getRoomsWithPresentations(): Promise<Room[]> {
   const { data } = await supabase
     .from('rooms')
